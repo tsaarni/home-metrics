@@ -1,0 +1,97 @@
+import asyncio
+import logging
+
+import httpx
+import prometheus
+import sensor
+
+logger = logging.getLogger("goe-charger")
+
+
+class GoECharger(object):
+    def configure(self, instance_name, config):
+        self.instance_name = instance_name
+        self.url = config["url"]
+        self.database_url = config["database_url"]
+        self.poll_period_sec = config.get("poll-period-sec", 60)
+
+    async def start(self):
+        logger.info(
+            "Starting Go-e instance_name={self.instance_name} goe_url={self.goe_url} poll_period_sec={self.poll_period_sec}"
+        )
+
+        while True:
+            try:
+                await self.update_metrics()
+            except Exception as e:
+                logger.exception("Error:", exc_info=e)
+
+            logger.info(f"Sleeping for {self.poll_period_sec} seconds")
+            await asyncio.sleep(self.poll_period_sec)
+
+    async def update_metrics(self):
+        logger.debug(f"Fetching data: url={self.url}")
+
+        client = httpx.AsyncClient()
+        response = await client.get(self.url)
+        if response.status_code == 200:
+            res = response.json()
+
+            metrics = prometheus.Metrics()
+
+            is_charging = "true" if res["car"] == 2 else "false"
+
+            samples = metrics.counter("electric_consumption_kwh", "Total consumed energy (kWh)")
+            samples.add(res["eto"] / 1000, labels={"charging": is_charging})
+
+            samples = metrics.gauge(
+                "electric_power_w",
+                "Instantaneous power (Watt)",
+                labels={"sensor": "car-charger", "charging": is_charging},
+            )
+            samples.add(res["nrg"][8], labels={"phase": "1"})
+            samples.add(res["nrg"][9], labels={"phase": "2"})
+            samples.add(res["nrg"][10], labels={"phase": "3"})
+            samples.add(res["nrg"][11], labels={"phase": "all"})
+
+            samples = metrics.gauge(
+                "electric_current_a",
+                "Current (Amps)",
+                labels={"sensor": "car-charger", "charging": is_charging},
+            )
+            samples.add(res["nrg"][4], labels={"phase": "1"})
+            samples.add(res["nrg"][5], labels={"phase": "2"})
+            samples.add(res["nrg"][6], labels={"phase": "3"})
+            samples.add(res["nrg"][4] + res["nrg"][5] + res["nrg"][6], labels={"phase": "all"})
+
+            samples = metrics.gauge(
+                "electric_voltage_v",
+                "RMS voltage (Volts)",
+                labels={"sensor": "car-charger", "charging": is_charging},
+            )
+            samples.add(res["nrg"][0], labels={"phase": "1"})
+            samples.add(res["nrg"][1], labels={"phase": "2"})
+            samples.add(res["nrg"][2], labels={"phase": "3"})
+
+            samples = metrics.gauge(
+                "charging_time_since_connected_min",
+                "Charging duration since session started (minutes)",
+                labels={"sensor": "car-charger", "charging": is_charging},
+            )
+            samples.add(int(res["cdi"]["value"] / (1000 * 60)) if res["cdi"]["type"] == 1 else 0)
+
+            samples = metrics.gauge(
+                "charging_energy_since_connected_kwh",
+                "Energy charged since session started (kWh)",
+                labels={"sensor": "car-charger", "charging": is_charging},
+            )
+            samples.add(res["wh"] / 1000)
+
+        else:
+            raise sensor.SensorException(f"failed to fetch data: {response.status_code}")
+
+        logger.info(f"Storing metrics: url={self.database_url}")
+        await client.post(self.database_url, content=metrics.format())
+
+
+sensor.register(GoECharger, "goe-charger")

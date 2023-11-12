@@ -1,0 +1,32 @@
+global:
+  database_url: http://localhost:8000
+sensors:
+- type: shelly1
+  config:
+    url: http://example-host:9001/status
+    poll-period-sec: 60
+- type: shelly2
+  name: heater
+  config:
+    url: http://example-host/rpc
+    poll-period-sec: 60
+- type: goe-charger
+  config:
+    url: http://example-host/api/status
+    poll-period-sec: 60
+- type: skoda
+  config:
+    username: email@example.com
+    password: example-passwd
+    vin: example-vehicle-identity-number
+- type: spot-hinta
+  config:
+    poll-period-sec: 3600
+- type: zigbee
+  config:
+    server: mosquitto
+    topic: "zigbee2mqtt/#"
+- type: zwave
+  config:
+    server: mosquitto
+    topic: "zwave/#"
