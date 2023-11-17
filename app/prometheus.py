@@ -72,10 +72,10 @@ class Metrics(object):
         return s
 
     def format(self) -> str:
-        report = ""
+        output = ""
         for sample in self.samples:
-            report += f"# HELP {sample['name']} {sample['description']}\n"
-            report += f"# TYPE {sample['name']} {sample['type']}\n"
+            output += f"# HELP {sample['name']} {sample['description']}\n"
+            output += f"# TYPE {sample['name']} {sample['type']}\n"
             for s in sample["samples"].format():
-                report += f"{sample['name']} {s}\n"
-        return report
+                output += f"{sample['name']} {s}\n"
+        return output

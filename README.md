@@ -13,7 +13,7 @@ Supported sources:
 - [go-e Gemini Charger](https://go-e.com/en/products/go-e-charger-gemini) for car charging data.
 - [Skoda Connect](https://www.skoda-connect.com/) for car odometer, battery charge percentage and esimated range data.
 - [spot-hinta.fi](https://spot-hinta.fi/) for electricity price.
-- TODO: Zigbee and Z-Wave sensors via MQTT broker for temperature and humidity data, among others, using [Z-Wave JS UI](https://github.com/zwave-js/zwave-js-ui) and [Zigbee2MQT](https://github.com/Koenkk/zigbee2mqtt).
+- TODO: Zigbee and Z-Wave sensors via MQTT broker for temperature and humidity data, among others, using [Z-Wave JS UI](https://github.com/zwave-js/zwave-js-ui) and [Zigbee2MQTT](https://github.com/Koenkk/zigbee2mqtt).
 
 ## Development
 
