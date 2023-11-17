@@ -47,7 +47,10 @@ class Metrics(object):
     def __init__(self):
         self.samples = []
 
-    def counter(self, name: str, description: str, labels: Optional[Dict[str, str]] = None) -> Samples:
+    def num_samples(self) -> int:
+        return len(self.samples)
+
+    def counter(self, name: str, description: str = "", labels: Optional[Dict[str, str]] = None) -> Samples:
         s = Samples(labels)
         self.samples.append(
             {
@@ -59,7 +62,7 @@ class Metrics(object):
         )
         return s
 
-    def gauge(self, name: str, description: str, labels: Optional[Dict[str, str]] = None) -> Samples:
+    def gauge(self, name: str, description: str = "", labels: Optional[Dict[str, str]] = None) -> Samples:
         s = Samples(labels)
         self.samples.append(
             {
