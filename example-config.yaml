@@ -30,3 +30,9 @@ sensors:
   config:
     server: mosquitto
     topic: "zwave/#"
+- type: melcloud
+  name: heatpump
+  config:
+    username: email@example.com
+    password: example-passwd
+    poll-period-sec: 3600
