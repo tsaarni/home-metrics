@@ -3,9 +3,9 @@ import logging
 
 import httpx
 import prometheus
-import sensor
+import task
 
-logger = logging.getLogger("goe-charger")
+logger = logging.getLogger("app.goe-charger")
 
 
 class GoECharger(object):
@@ -94,4 +94,4 @@ class GoECharger(object):
         await client.post(self.database_url, content=metrics.format())
 
 
-sensor.register(GoECharger, "goe-charger")
+task.register(GoECharger, "goe-charger")

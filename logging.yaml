@@ -1,7 +1,12 @@
 version: 1
 root:
-  level: DEBUG
+  level: WARNING
   handlers: [console]
+loggers:
+  app:
+    level: DEBUG
+    handlers: [console]
+    propagate: False
 handlers:
   console:
     class: logging.StreamHandler

@@ -3,7 +3,7 @@ import datetime
 import logging
 
 import prometheus
-import sensor
+import task
 import utils
 from aiohttp import ClientSession
 from skodaconnect import Connection
@@ -80,4 +80,4 @@ class Skoda(object):
                 await request.post(self.database_url, data=metrics.format())
 
 
-sensor.register(Skoda, "skoda")
+task.register(Skoda, "skoda")

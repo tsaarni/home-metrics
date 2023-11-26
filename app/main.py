@@ -5,7 +5,7 @@ import asyncio
 import logging.config
 import sys
 
-import sensor
+import task
 import yaml
 
 # Configure logger.
@@ -13,10 +13,10 @@ with open("logging.yaml") as f:
     config = yaml.safe_load(f)
     logging.config.dictConfig(config)
 
-logger = logging.getLogger("main")
+logger = logging.getLogger("app.main")
 
-# Dummy import to make sure all sensor classes are registered.
-import spothinta, skoda, goecharger, shelly1, shelly2, zwave, zigbee
+# Dummy import to make sure all task classes are registered.
+import spothinta, skoda, goecharger, shelly1, shelly2, zwave, zigbee, melcloud
 
 
 class Application(object):
@@ -34,24 +34,25 @@ class Application(object):
         logger.info(f"Loading configuration file: {args.config}")
         config = yaml.safe_load(open(args.config))
 
-        # Instantiate sensor classes that are requested in the configuration file.
-        self.sensors = []
+        # Instantiate task classes that are requested in the configuration file.
+        self.tasks = []
         for s in config["sensors"]:
-            # Combine global config with sensor-specific config.
-            sensor_config = s["config"]
-            sensor_config.update(config["global"])
+            # Combine global config with task-specific config.
+            task_config = s["config"]
+            if "global" in config:
+                task_config.update(config["global"])
 
-            # Instantiate sensor class and configure it.
-            cls = sensor.get_sensor_class(s["type"])
+            # Instantiate task class and configure it.
+            cls = task.get_task_class(s["type"])
             instance = cls()
-            instance.configure(s.get("name", ""), sensor_config)
+            instance.configure(s.get("name", ""), task_config)
 
-            self.sensors.append(instance)
+            self.tasks.append(instance)
 
     async def start(self):
-        # Start all sensors.
-        for s in self.sensors:
-            logger.info(f"Starting sensor: {s}")
+        # Start all tasks.
+        for s in self.tasks:
+            logger.info(f"Starting task: {s}")
             asyncio.create_task(s.start())
 
         # Do not exit, keep running until killed.

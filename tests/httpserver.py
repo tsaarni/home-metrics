@@ -2,9 +2,11 @@
 
 import http.server
 import logging
-import logging.config
 
 import yaml
+
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger("httpserver")
 
 
 class LoggingHandler(http.server.BaseHTTPRequestHandler):
@@ -26,13 +28,6 @@ class LoggingHandler(http.server.BaseHTTPRequestHandler):
 
 
 def main():
-    with open("logging.yaml") as f:
-        config = yaml.safe_load(f)
-        logging.config.dictConfig(config)
-
-    global logger
-    logger = logging.getLogger("httpserver")
-
     server_address = ("127.0.0.1", 8000)
     logger.info(f"Starting server on {server_address[0]}:{server_address[1]}")
     httpd = http.server.HTTPServer(server_address, LoggingHandler)

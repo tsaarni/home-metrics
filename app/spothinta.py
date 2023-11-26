@@ -4,11 +4,11 @@ from datetime import datetime
 
 import httpx
 import prometheus
-import sensor
+import task
 
 SPOT_HINTA_URI = "https://api.spot-hinta.fi/TodayAndDayForward"
 
-logger = logging.getLogger("spot-hinta")
+logger = logging.getLogger("app.spot-hinta")
 
 
 class SpotHinta(object):
@@ -52,10 +52,10 @@ class SpotHinta(object):
                 samples.add(item["PriceWithTax"], labels={"tax": "true"}, timestamp_msec=item_time)
 
         else:
-            raise sensor.SensorException(f"failed to fetch data: {response.status_code}")
+            raise task.TaskException(f"failed to fetch data: {response.status_code}")
 
         logger.info(f"Storing metrics: url={self.database_url}")
         await client.post(self.database_url, content=metrics.format())
 
 
-sensor.register(SpotHinta, "spot-hinta")
+task.register(SpotHinta, "spot-hinta")

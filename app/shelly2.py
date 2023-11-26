@@ -3,9 +3,9 @@ import logging
 
 import httpx
 import prometheus
-import sensor
+import task
 
-logger = logging.getLogger("shelly2")
+logger = logging.getLogger("app.shelly2")
 
 
 class Shelly2(object):
@@ -56,10 +56,10 @@ class Shelly2(object):
             samples.add(res["result"]["switch:0"]["voltage"], labels={"sensor": self.instance_name})
 
         else:
-            raise sensor.SensorException(f"failed to fetch data: {response.status_code}")
+            raise task.TaskException(f"failed to fetch data: {response.status_code}")
 
         logger.info(f"Storing metrics: url={self.database_url}")
         await client.post(self.database_url, content=metrics.format())
 
 
-sensor.register(Shelly2, "shelly2")
+task.register(Shelly2, "shelly2")
