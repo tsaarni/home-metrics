@@ -1,3 +1,4 @@
+import asyncio
 import json
 import logging
 
@@ -24,6 +25,7 @@ class Zigbee(object):
                 await self.loop_forever()
             except Exception as e:
                 logger.exception("Error:", exc_info=e)
+                await asyncio.sleep(60)
 
     async def loop_forever(self):
         async with aiomqtt.Client(self.server, self.port) as client:

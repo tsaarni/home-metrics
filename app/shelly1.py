@@ -25,6 +25,7 @@ class Shelly1(object):
                 await self.update_metrics()
             except Exception as e:
                 logger.exception("Error:", exc_info=e)
+                await asyncio.sleep(60)
 
             logger.info(f"Sleeping for {self.poll_period_sec} seconds")
             await asyncio.sleep(self.poll_period_sec)

@@ -25,6 +25,7 @@ class GoECharger(object):
                 await self.update_metrics()
             except Exception as e:
                 logger.exception("Error:", exc_info=e)
+                await asyncio.sleep(60)
 
             logger.info(f"Sleeping for {self.poll_period_sec} seconds")
             await asyncio.sleep(self.poll_period_sec)
@@ -42,17 +43,17 @@ class GoECharger(object):
             is_charging = "true" if res["car"] == 2 else "false"
 
             samples = metrics.counter("electric_consumption_kwh", "Total consumed energy (kWh)")
-            samples.add(res["eto"] / 1000, labels={"charging": is_charging})
+            samples.add(res["eto"] / 1000, labels={"sensor": "car-charger", "charging": is_charging})
 
             samples = metrics.gauge(
                 "electric_power_w",
                 "Instantaneous power (Watt)",
                 labels={"sensor": "car-charger", "charging": is_charging},
             )
-            samples.add(res["nrg"][8], labels={"phase": "1"})
-            samples.add(res["nrg"][9], labels={"phase": "2"})
-            samples.add(res["nrg"][10], labels={"phase": "3"})
-            samples.add(res["nrg"][11], labels={"phase": "all"})
+            samples.add(res["nrg"][8], labels={"sensor": "car-charger", "phase": "1"})
+            samples.add(res["nrg"][9], labels={"sensor": "car-charger", "phase": "2"})
+            samples.add(res["nrg"][10], labels={"sensor": "car-charger", "phase": "3"})
+            samples.add(res["nrg"][11], labels={"sensor": "car-charger", "phase": "all"})
 
             samples = metrics.gauge(
                 "electric_current_a",
@@ -88,7 +89,7 @@ class GoECharger(object):
             samples.add(res["wh"] / 1000)
 
         else:
-            raise sensor.SensorException(f"failed to fetch data: {response.status_code}")
+            raise task.TaskException(f"failed to fetch data: {response.status_code}")
 
         logger.info(f"Storing metrics: url={self.database_url}")
         await client.post(self.database_url, content=metrics.format())
