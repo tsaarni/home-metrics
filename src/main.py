@@ -16,7 +16,7 @@ with open("logging.yaml") as f:
 logger = logging.getLogger("app.main")
 
 # Dummy import to make sure all task classes are registered.
-import spothinta, skoda, goecharger, shelly1, shelly2, zwave, zigbee, melcloud
+import homemetrics
 
 
 class Application(object):

@@ -5,6 +5,7 @@ from datetime import datetime
 import httpx
 import prometheus
 import task
+import utils
 
 SPOT_HINTA_URI = "https://api.spot-hinta.fi/TodayAndDayForward"
 
@@ -14,11 +15,11 @@ logger = logging.getLogger("app.spot-hinta")
 class SpotHinta(object):
     def configure(self, instance_name, config):
         self.instance_name = instance_name
-        self.poll_period_sec = config.get("poll-period-sec", 3600)
+        self.poll_period = utils.parse_timedelta(config.get("poll-period", "8h"))
         self.database_url = config["database_url"]
 
     async def start(self):
-        logger.info(f"Starting SpotHinta instance_name={self.instance_name} poll_period_sec={self.poll_period_sec}")
+        logger.info(f"Starting SpotHinta instance_name={self.instance_name} poll_period_sec={self.poll_period}")
 
         while True:
             try:
@@ -27,8 +28,9 @@ class SpotHinta(object):
                 logger.exception("Error:", exc_info=e)
                 await asyncio.sleep(60)
 
-            logger.info(f"Sleeping for {self.poll_period_sec} seconds")
-            await asyncio.sleep(self.poll_period_sec)
+            delay = utils.random_jitter(self.poll_period)
+            logger.info(f"Sleeping for {delay}")
+            await asyncio.sleep(delay.total_seconds())
 
     async def update_metrics(self):
         logger.debug(f"Fetching data: url={SPOT_HINTA_URI}")

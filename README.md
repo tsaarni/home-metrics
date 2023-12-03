@@ -29,7 +29,7 @@ pip install -r requirements.txt
 Execute the application:
 
 ```bash
-python3 app/main.py --config config.yaml
+python3 src/main.py --config config.yaml
 ```
 
 Run the test web server to see the metrics being pushed to it in Prometheus exposition format:
@@ -41,7 +41,8 @@ python3 tests/httpserver.py
 Build the container image:
 
 ```bash
-docker build -t quay.io/tsaarni/home-metrics:latest .
+podman build -t quay.io/tsaarni/home-metrics:latest .
+podman push quay.io/tsaarni/home-metrics:latest
 ```
 
 The documentation for used APIs is available at following links:

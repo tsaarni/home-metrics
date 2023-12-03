@@ -4,7 +4,7 @@ root:
   handlers: [console]
 loggers:
   app:
-    level: DEBUG
+    level: INFO
     handlers: [console]
     propagate: False
 handlers:

@@ -5,6 +5,7 @@ import datetime
 import httpx
 import prometheus
 import task
+import utils
 
 MELCLOUD_URI = "https://app.melcloud.com/Mitsubishi.Wifi.Client"
 APP_VERSION = "1.30.5.0"
@@ -17,11 +18,11 @@ class Melcloud(object):
         self.instance_name = instance_name if instance_name else "melcloud"
         self.username = config["username"]
         self.password = config["password"]
-        self.poll_period_sec = config.get("poll-period-sec", 60 * 60)
+        self.poll_period = utils.parse_timedelta(config.get("poll-period", "1h"))
         self.database_url = config["database_url"]
 
     async def start(self):
-        logger.info(f"Starting Melcloud instance_name={self.instance_name} poll_period_sec={self.poll_period_sec}")
+        logger.info(f"Starting Melcloud instance_name={self.instance_name} poll_period_sec={self.poll_period}")
 
         while True:
             try:
@@ -30,8 +31,9 @@ class Melcloud(object):
                 logger.exception("Error:", exc_info=e)
                 await asyncio.sleep(60)
 
-            logger.info(f"Sleeping for {self.poll_period_sec} seconds")
-            await asyncio.sleep(self.poll_period_sec)
+            delay = utils.random_jitter(self.poll_period)
+            logger.info(f"Sleeping for {delay}")
+            await asyncio.sleep(delay.total_seconds())
 
     async def update_metrics(self):
         logger.debug(f"loggin in: username={self.username} password={'<redacted>' if self.password else 'None'}")
@@ -69,8 +71,10 @@ class Melcloud(object):
         res = response.json()
         dev = res[0]["Structure"]["Devices"][0]["Device"]
 
-        last_report = datetime.datetime.fromisoformat(dev["LastTimeStamp"])
-        timestamp = last_report.timestamp() * 1000
+        last_report_utc = (
+            datetime.datetime.fromisoformat(dev["LastTimeStamp"]).astimezone().replace(tzinfo=datetime.timezone.utc)
+        )
+        timestamp = last_report_utc.timestamp() * 1000
 
         metrics = prometheus.Metrics()
 

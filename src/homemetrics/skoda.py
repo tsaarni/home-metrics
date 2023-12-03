@@ -18,11 +18,13 @@ class Skoda(object):
         self.password = config["password"]
         self.vin = config["vin"]
         self.api_debug = config.get("debug", False)
-        self.schedule = datetime.datetime.strptime(config.get("schedule", "5:00"), "%H:%M").time()
+        self.poll_period = utils.parse_timedelta(config.get("poll-period", "8h"))
         self.database_url = config["database_url"]
 
     async def start(self):
-        logger.info(f"Starting Skoda instance_name={self.instance_name} vin={self.vin} schedule={self.schedule}")
+        logger.info(
+            f"Starting Skoda instance_name={self.instance_name} vin={self.vin} poll_period_sec={self.poll_period}"
+        )
 
         # Scrape once immediately and then schedule next scrape by waiting until wake up time.
         while True:
@@ -34,8 +36,9 @@ class Skoda(object):
 
             # TODO: If scraping fails, retry after a short delay instead of waiting until next scheduled time.
 
-            # Schedule next scrape.
-            await utils.wait_until([self.schedule])
+            delay = utils.random_jitter(self.poll_period)
+            logger.info(f"Sleeping for {delay}")
+            await asyncio.sleep(delay.total_seconds())
 
     async def update_metrics(self):
         # Create HTTP session.

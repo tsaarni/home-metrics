@@ -4,6 +4,7 @@ import logging
 import httpx
 import prometheus
 import task
+import utils
 
 logger = logging.getLogger("app.shelly1")
 
@@ -12,12 +13,12 @@ class Shelly1(object):
     def configure(self, instance_name, config):
         self.instance_name = instance_name
         self.url = config["url"]
-        self.poll_period_sec = config.get("poll-period-sec", 60)
+        self.poll_period = utils.parse_timedelta(config.get("poll-period", "5s"))
         self.database_url = config["database_url"]
 
     async def start(self):
         logger.info(
-            f"Starting Shelly 1st Gen instance_name={self.instance_name} url={self.url} poll_period_sec={self.poll_period_sec}"
+            f"Starting Shelly 1st Gen instance_name={self.instance_name} url={self.url} poll_period_sec={self.poll_period}"
         )
 
         while True:
@@ -27,8 +28,8 @@ class Shelly1(object):
                 logger.exception("Error:", exc_info=e)
                 await asyncio.sleep(60)
 
-            logger.info(f"Sleeping for {self.poll_period_sec} seconds")
-            await asyncio.sleep(self.poll_period_sec)
+            logger.info(f"Sleeping for {self.poll_period}")
+            await asyncio.sleep(self.poll_period.total_seconds())
 
     async def update_metrics(self):
         logger.debug(f"Fetching data: url={self.url}")
