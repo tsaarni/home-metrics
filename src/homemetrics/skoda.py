@@ -8,7 +8,7 @@ import utils
 from aiohttp import ClientSession
 from skodaconnect import Connection
 
-logger = logging.getLogger("skoda")
+logger = logging.getLogger("app.skoda")
 
 
 class Skoda(object):

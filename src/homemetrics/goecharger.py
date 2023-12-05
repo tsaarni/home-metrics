@@ -44,7 +44,7 @@ class GoECharger(object):
             is_charging = "true" if res["car"] == 2 else "false"
 
             samples = metrics.counter("electric_consumption_kwh", "Total consumed energy (kWh)")
-            samples.add(res["eto"] / 1000, labels={"sensor": "car-charger", "charging": is_charging})
+            samples.add(res["eto"] / 1000, labels={"sensor": "car-charger", "charging": is_charging, "phase": "all"})
 
             samples = metrics.gauge(
                 "electric_power_w",
