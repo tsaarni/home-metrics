@@ -70,7 +70,7 @@ class Skoda(object):
             samples = metrics.counter("odometer_km", "Odometer (km)", labels={"sensor": "car"})
             samples.add(res_vehicle_status["vehicle_remote"]["mileageInKm"], timestamp_msec=time_of_report)
 
-            samples = metrics.gauge("state_of_charge_percent", "State of charge (%)", labels={"sensor": "car"})
+            samples = metrics.gauge("battery_percentage", "State of charge (%)", labels={"sensor": "car"})
             samples.add(res_charging_status["battery"]["stateOfChargeInPercent"], timestamp_msec=time_of_report)
 
             samples = metrics.gauge("range_km", "Estimated range (km)", labels={"sensor": "car"})
