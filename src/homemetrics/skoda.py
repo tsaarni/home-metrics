@@ -18,7 +18,7 @@ class Skoda(object):
         self.password = config["password"]
         self.vin = config["vin"]
         self.api_debug = config.get("debug", False)
-        self.poll_period = utils.parse_timedelta(config.get("poll-period", "8h"))
+        self.poll_period = utils.parse_timedelta(config.get("poll-period", "2h"))
         self.database_url = config["database_url"]
 
     async def start(self):

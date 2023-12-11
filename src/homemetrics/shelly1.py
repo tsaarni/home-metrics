@@ -28,7 +28,7 @@ class Shelly1(object):
                 logger.exception("Error:", exc_info=e)
                 await asyncio.sleep(60)
 
-            logger.info(f"Sleeping for {self.poll_period}")
+            logger.debug(f"Sleeping for {self.poll_period}")
             await asyncio.sleep(self.poll_period.total_seconds())
 
     async def update_metrics(self):
@@ -76,7 +76,7 @@ class Shelly1(object):
         else:
             raise task.TaskException(f"failed to fetch data: {response.status_code}")
 
-        logger.info(f"Storing metrics: url={self.database_url}")
+        logger.debug(f"Storing metrics: url={self.database_url}")
         await client.post(self.database_url, content=metrics.format())
 
 
