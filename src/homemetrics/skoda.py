@@ -18,8 +18,10 @@ class Skoda(object):
         self.password = config["password"]
         self.vin = config["vin"]
         self.api_debug = config.get("debug", False)
-        self.poll_schedule = config.get("poll-schedule", ["0:00", "12:00"])
         self.database_url = config["database_url"]
+        self.poll_schedule = []
+        for t in config.get("poll-schedule", ["0:00", "12:00"]):
+            self.poll_schedule.append(datetime.datetime.strptime(t, "%H:%M").time())
 
     async def start(self):
         logger.info(
@@ -30,17 +32,18 @@ class Skoda(object):
         while True:
             try:
                 await self.update_metrics()
+
+                # TODO: If scraping fails, retry after a short delay instead of waiting until next scheduled time.
+
+                # Calculate next scheduled wakeup time.
+                seconds_until_wakeup, next_wakeup = utils.next_wakeup(self.poll_schedule)
+                delay = utils.random_jitter(seconds_until_wakeup)
+                logger.info(f"Next wakeup at {next_wakeup}, sleeping for {delay} (jittered))")
+                await asyncio.sleep(delay.total_seconds())
+
             except Exception as e:
                 logger.exception("Error:", exc_info=e)
                 await asyncio.sleep(60)
-
-            # TODO: If scraping fails, retry after a short delay instead of waiting until next scheduled time.
-
-            # Calculate next scheduled wakeup time.
-            seconds_until_wakeup, next_wakeup = utils.next_wakeup(self.poll_schedule)
-            delay = utils.random_jitter(seconds_until_wakeup)
-            logger.info(f"Next wakeup at {next_wakeup}, sleeping for {delay} (jittered))")
-            await asyncio.sleep(delay.total_seconds())
 
     async def update_metrics(self):
         # Create HTTP session.
