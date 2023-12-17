@@ -52,8 +52,21 @@ class Application(object):
     async def start(self):
         # Start all tasks.
         for s in self.tasks:
-            logger.info(f"Starting task: {s}")
-            asyncio.create_task(s.start())
+            # Closure to wrap task in try/except block and retry on failure.
+            async def task_wrapper(s):
+                logger.info(f"Starting task: {s}")
+                delay = 10
+                while True:
+                    try:
+                        await s.start()
+                    except Exception as e:
+                        logger.exception(f"Error in task {s}:", exc_info=e)
+                        await asyncio.sleep(delay)
+                        logger.info(f"Retrying task {s} after {delay} seconds")
+                        delay *= 2  # Exponential backoff.
+                        delay = min(delay, 60 * 60)  # Limit to 60 minutes.
+
+            asyncio.create_task(task_wrapper(s))
 
         # Do not exit, keep running until killed.
         await asyncio.Event().wait()

@@ -21,11 +21,7 @@ class Zigbee(object):
     async def start(self):
         logger.info(f"Starting Zigbee instance_name={self.instance_name} server={self.server} topic={self.topic}")
         while True:
-            try:
-                await self.loop_forever()
-            except Exception as e:
-                logger.exception("Error:", exc_info=e)
-                await asyncio.sleep(60)
+            await self.loop_forever()
 
     async def loop_forever(self):
         async with aiomqtt.Client(self.server, self.port) as client:

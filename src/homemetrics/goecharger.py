@@ -22,11 +22,7 @@ class GoECharger(object):
         )
 
         while True:
-            try:
-                await self.update_metrics()
-            except Exception as e:
-                logger.exception("Error:", exc_info=e)
-                await asyncio.sleep(60)
+            await self.update_metrics()
 
             logger.info(f"Sleeping for {self.poll_period}")
             await asyncio.sleep(self.poll_period.total_seconds())

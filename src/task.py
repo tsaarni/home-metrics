@@ -1,7 +1,7 @@
 import logging
 from typing import Protocol, Type
 
-logger = logging.getLogger("app.task")
+logger = logging.getLogger("task")
 
 
 # Interface for task classes.

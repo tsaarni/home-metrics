@@ -30,20 +30,13 @@ class Skoda(object):
 
         # Scrape once immediately and then schedule next scrape by waiting until wake up time.
         while True:
-            try:
-                await self.update_metrics()
+            await self.update_metrics()
 
-                # TODO: If scraping fails, retry after a short delay instead of waiting until next scheduled time.
-
-                # Calculate next scheduled wakeup time.
-                seconds_until_wakeup, next_wakeup = utils.next_wakeup(self.poll_schedule)
-                delay = utils.random_jitter(seconds_until_wakeup)
-                logger.info(f"Next wakeup at {next_wakeup}, sleeping for {delay} (jittered))")
-                await asyncio.sleep(delay.total_seconds())
-
-            except Exception as e:
-                logger.exception("Error:", exc_info=e)
-                await asyncio.sleep(60)
+            # Calculate next scheduled wakeup time.
+            seconds_until_wakeup, next_wakeup = utils.next_wakeup(self.poll_schedule)
+            delay = utils.random_jitter(seconds_until_wakeup)
+            logger.info(f"Next wakeup at {next_wakeup}, sleeping for {delay} (jittered)")
+            await asyncio.sleep(delay.total_seconds())
 
     async def update_metrics(self):
         # Create HTTP session.

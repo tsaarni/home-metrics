@@ -22,11 +22,7 @@ class SpotHinta(object):
         logger.info(f"Starting SpotHinta instance_name={self.instance_name} poll_period_sec={self.poll_period}")
 
         while True:
-            try:
-                await self.update_metrics()
-            except Exception as e:
-                logger.exception("Error:", exc_info=e)
-                await asyncio.sleep(60)
+            await self.update_metrics()
 
             delay = utils.random_jitter(self.poll_period)
             logger.info(f"Sleeping for {delay}")
