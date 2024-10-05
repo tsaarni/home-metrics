@@ -24,30 +24,34 @@ class Zwave(object):
         logger.info(f"Starting Z-Wave instance_name={self.instance_name} server={self.server} topic={self.topic}")
 
         async with aiomqtt.Client(self.server, self.port) as client:
-            async with client.messages() as messages:
-                await client.subscribe(self.topic)
-                async for message in messages:
-                    # logger.debug(f"Received message: {message.topic} {message.payload}")
+            await client.subscribe(self.topic)
+            async for message in client.messages:
+                # logger.debug(f"Received message: {message.topic} {message.payload}")
 
-                    # Skip informational messages.
-                    if message.topic.matches("zwave/_CLIENTS/#"):
-                        continue
-                    if message.topic.matches("zwave/+/lastActive"):
-                        continue
-                    if message.topic.matches("zwave/+/status"):
-                        continue
+                # Skip informational messages.
+                if message.topic.matches("zwave/_CLIENTS/#"):
+                    continue
+                if message.topic.matches("zwave/+/lastActive"):
+                    continue
+                if message.topic.matches("zwave/+/status"):
+                    continue
 
-                    # Parse the topic: <nodeId>/<commandClass>/<endpoint>/<property>/<propertyKey?>
-                    parts = str(message.topic).split("/")
+                # Parse the topic: <nodeId>/<commandClass>/<endpoint>/<property>/<propertyKey?>
+                parts = str(message.topic).split("/")
 
-                    await self.sensor_event(
-                        parts[1],  # node_id
-                        int(parts[2]),  # command_class
-                        int(parts[3]),  # endpoint
-                        parts[4],  # property
-                        parts[5] if len(parts) > 5 else None,  # property_key
-                        json.loads(message.payload),
-                    )
+                # ensure that payload is string
+                payload = (
+                    message.payload.decode("utf-8") if isinstance(message.payload, bytes) else str(message.payload)
+                )
+
+                await self.sensor_event(
+                    parts[1],  # node_id
+                    int(parts[2]),  # command_class
+                    int(parts[3]),  # endpoint
+                    parts[4],  # property
+                    parts[5] if len(parts) > 5 else None,  # property_key
+                    json.loads(payload),
+                )
 
     async def sensor_event(
         self, node_id: str, command_class: int, endpoint: int, property: str, property_key: str | None, payload: dict

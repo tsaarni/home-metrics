@@ -25,20 +25,23 @@ class Zigbee(object):
 
     async def loop_forever(self):
         async with aiomqtt.Client(self.server, self.port) as client:
-            async with client.messages() as messages:
-                await client.subscribe(self.topic)
-                async for message in messages:
-                    # logger.debug(f"Received message: {message.topic} {message.payload}")
+            await client.subscribe(self.topic)
+            async for message in client.messages:
+                # logger.debug(f"Received message: {message.topic} {message.payload}")
 
-                    # Skip (informational) bridge messages.
-                    if message.topic.matches("zigbee2mqtt/bridge/#"):
-                        continue
-                    try:
-                        event = json.loads(message.payload)
-                        topic = str(message.topic).split("/")
-                        await self.sensor_event(topic[1], event)
-                    except json.JSONDecodeError:
-                        logger.debug(f"Received non-JSON message: {message.payload}")
+                # Skip (informational) bridge messages.
+                if message.topic.matches("zigbee2mqtt/bridge/#"):
+                    continue
+                try:
+                    # ensure that payload is string
+                    payload = (
+                        message.payload.decode("utf-8") if isinstance(message.payload, bytes) else str(message.payload)
+                    )
+                    event = json.loads(payload)
+                    topic = str(message.topic).split("/")
+                    await self.sensor_event(topic[1], event)
+                except json.JSONDecodeError:
+                    logger.debug(f"Received non-JSON message: {message.payload}")
 
     async def sensor_event(self, sensor_name, event):
         logger.debug(f"{sensor_name} {event}")
