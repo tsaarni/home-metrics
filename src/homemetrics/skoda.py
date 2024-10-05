@@ -34,7 +34,8 @@ class Skoda(object):
 
             # Calculate next scheduled wakeup time.
             seconds_until_wakeup, next_wakeup = utils.next_wakeup(self.poll_schedule)
-            delay = utils.random_jitter(seconds_until_wakeup)
+            # always wait at least to the next wakeup time + some jitter
+            delay = abs(utils.random_jitter(seconds_until_wakeup))
             logger.info(f"Next wakeup at {next_wakeup}, sleeping for {delay} (jittered)")
             await asyncio.sleep(delay.total_seconds())
 
