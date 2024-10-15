@@ -56,7 +56,7 @@ class Application(object):
             async def task_wrapper(s):
                 logger.info(f"Starting task: {s}")
                 delay = 10
-                last_exception_time = asyncio.get_event_loop.time()
+                last_exception_time = asyncio.get_event_loop().time()
                 while True:
                     try:
                         await s.start()
