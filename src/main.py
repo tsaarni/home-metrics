@@ -56,11 +56,17 @@ class Application(object):
             async def task_wrapper(s):
                 logger.info(f"Starting task: {s}")
                 delay = 10
+                last_exception_time = asyncio.get_event_loop.time()
                 while True:
                     try:
                         await s.start()
                     except Exception as e:
-                        logger.exception(f"Error in task {s}:", exc_info=e)
+                        # Reset retry delay to 10 seconds if no exceptions in the last 60 minutes.
+                        current_time = asyncio.get_event_loop().time()
+                        if current_time - last_exception_time > 60 * 60:
+                            delay = 10
+                        last_exception_time = current_time
+                        logger.exception(f"Error in task {s}, retry will be in {delay} seconds:", exc_info=e)
                         await asyncio.sleep(delay)
                         logger.info(f"Retrying task {s} after {delay} seconds")
                         delay *= 2  # Exponential backoff.
