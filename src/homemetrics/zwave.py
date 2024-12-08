@@ -9,7 +9,17 @@ import httpx
 import prometheus
 import task
 
+from dataclasses import dataclass
+
 logger = logging.getLogger("app.zwave")
+
+
+@dataclass
+class SensorData:
+    sensor: str
+    property: str
+    value: float
+    time: int
 
 
 class Zwave(object):
@@ -44,7 +54,7 @@ class Zwave(object):
                     message.payload.decode("utf-8") if isinstance(message.payload, bytes) else str(message.payload)
                 )
 
-                await self.sensor_event(
+                data = self.parse_event(
                     parts[1],  # node_id
                     int(parts[2]),  # command_class
                     int(parts[3]),  # endpoint
@@ -53,9 +63,20 @@ class Zwave(object):
                     json.loads(payload),
                 )
 
-    async def sensor_event(
+                if data:
+                    # Store the data in the database.
+                    metrics = prometheus.Metrics()
+                    metrics.gauge(data.property, labels={"sensor": data.sensor}).add(
+                        data.value, timestamp_msec=data.time
+                    )
+                    await httpx.AsyncClient().post(self.database_url, content=metrics.format())
+
+                    # Publish the data to the MQTT broker.
+                    await client.publish(f"home/{data.sensor}/{data.property}", data.value)
+
+    def parse_event(
         self, node_id: str, command_class: int, endpoint: int, property: str, property_key: str | None, payload: dict
-    ):
+    ) -> SensorData | None:
         # Skip command classes we don't care about, out of the following we will receive:
         #   - Basic: 32
         #   - SensorBinary: 48
@@ -68,7 +89,7 @@ class Zwave(object):
         #   - Battery: 128
         #   - Version: 134
         if command_class not in [48, 49, 50, 128]:
-            return
+            return None
 
         payload_dbg = {
             "time": datetime.datetime.fromtimestamp(payload["time"] / 1000).isoformat(),
@@ -101,27 +122,26 @@ class Zwave(object):
         #  - door sensor
         if command_class == 49 and (endpoint == 0 or endpoint == 3):
             if property != "Air_temperature":
-                return
-
-            metrics.gauge("temperature_celsius", labels={"sensor": node_id}).add(
-                payload["value"], timestamp_msec=payload["time"]
+                return None
+            return SensorData(
+                sensor=node_id, property="temperature_celsius", value=payload["value"], time=payload["time"]
             )
 
         if command_class == 50 and endpoint == 4 and property == "value":
             if property_key == "65537":
                 # Electric consumption kWh
-                metrics.gauge("electric_consumption_kwh", labels={"sensor": node_id}).add(
-                    payload["value"], timestamp_msec=payload["time"]
+                return SensorData(
+                    sensor=node_id, property="electric_consumption_kwh", value=payload["value"], time=payload["time"]
                 )
             elif property_key == "66049":
                 # Electric power W
-                metrics.gauge("electric_power_w", labels={"sensor": node_id}).add(
-                    payload["value"], timestamp_msec=payload["time"]
+                return SensorData(
+                    sensor=node_id, property="electric_power_w", value=payload["value"], time=payload["time"]
                 )
             elif property_key == "66561":
                 # Electric voltage V
-                metrics.gauge("electric_voltage_v", labels={"sensor": node_id}).add(
-                    payload["value"], timestamp_msec=payload["time"]
+                return SensorData(
+                    sensor=node_id, property="electric_voltage_v", value=payload["value"], time=payload["time"]
                 )
 
         # Door contact
@@ -129,20 +149,17 @@ class Zwave(object):
             # in zwave true means open, false means closed
             # turn the logic other way around to signify
             # "contact"  true == closed, false == open
-            metrics.gauge("contact_boolean", labels={"sensor": node_id}).add(
-                not payload["value"], timestamp_msec=payload["time"]
+            return SensorData(
+                sensor=node_id, property="contact_boolean", value=not payload["value"], time=payload["time"]
             )
 
         # Battery
         if command_class == 128 and endpoint == 0 and property == "level":
-            metrics.gauge("battery_percentage", labels={"sensor": node_id}).add(
-                payload["value"], timestamp_msec=payload["time"]
+            return SensorData(
+                sensor=node_id, property="battery_percentage", value=payload["value"], time=payload["time"]
             )
 
-        # If we have collected any metrics, store them.
-        if metrics.num_samples() > 0:
-            client = httpx.AsyncClient()
-            await client.post(self.database_url, content=metrics.format())
+        return None
 
 
 task.register(Zwave, "zwave")

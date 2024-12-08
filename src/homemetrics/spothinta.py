@@ -17,6 +17,7 @@ class SpotHinta(object):
         self.instance_name = instance_name
         self.poll_period = utils.parse_timedelta(config.get("poll-period", "8h"))
         self.database_url = config["database_url"]
+        self.rates = config["rates"]
 
     async def start(self):
         logger.info(f"Starting SpotHinta instance_name={self.instance_name} poll_period_sec={self.poll_period}")
@@ -33,25 +34,46 @@ class SpotHinta(object):
 
         client = httpx.AsyncClient()
         response = await client.get(SPOT_HINTA_URI)
+        response.raise_for_status()
 
-        if response.status_code == 200:
-            res = response.json()
+        res = response.json()
 
-            metrics = prometheus.Metrics()
-            samples = metrics.gauge(
-                "electric_price_eur",
-                "Electricity price (euros per kWh)",
-                labels={"tax": "false"},
-            )
+        metrics = prometheus.Metrics()
+        samples = metrics.gauge(
+            "electric_price_eur",
+            "Electricity price (euros per kWh)",
+        )
 
-            for item in res:
-                item_time = datetime.fromisoformat(item["DateTime"]).timestamp() * 1000
+        for item in res:
+            item_time = datetime.fromisoformat(item["DateTime"]).timestamp() * 1000
 
-                samples.add(item["PriceNoTax"], labels={"tax": "false"}, timestamp_msec=item_time)
-                samples.add(item["PriceWithTax"], labels={"tax": "true"}, timestamp_msec=item_time)
+            samples.add(item["PriceNoTax"], labels={"tax": "false"}, timestamp_msec=item_time)
+            samples.add(item["PriceWithTax"], labels={"tax": "true"}, timestamp_msec=item_time)
 
-        else:
-            raise task.TaskException(f"failed to fetch data: {response.status_code}")
+        # Generate day/night transmission rates for the next 24 hours.
+        # The day rate begins at 07:00 and ends at 21:59.
+        # The night rate begins at 22:00 and ends at 06:59.
+        transmission = metrics.gauge(
+            "electric_transmission_price_eur",
+            "Electricity transmission price (euros per kWh)",
+        )
+
+        # Generate electricity tax rates.
+        tax = metrics.gauge(
+            "electric_tax_eur",
+            "Electricity tax (euros per kWh)",
+        )
+
+        current_time = datetime.now()
+        for i in range(24):
+            t = current_time + utils.parse_timedelta(f"{i}h")
+            t = t.replace(minute=0, second=0, microsecond=0)
+            if 7 <= t.hour <= 21:
+                transmission.add(self.rates["day"], labels={"rate": "day"}, timestamp_msec=t.timestamp() * 1000)
+            else:
+                transmission.add(self.rates["night"], labels={"rate": "night"}, timestamp_msec=t.timestamp() * 1000)
+
+            tax.add(self.rates["tax"], timestamp_msec=t.timestamp() * 1000)
 
         logger.info(f"Storing metrics: url={self.database_url}")
         await client.post(self.database_url, content=metrics.format())
